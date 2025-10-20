@@ -2,6 +2,12 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:03_Funny-Faces/03_Funny-Faces.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:02_Batch-Translate-aGroup-of-Messages/02_Batch-Translate-aGroup-of-Messages.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:01_Translate-a-Simple-Message/01_Translate-a-Simple-Message.xcodeproj">
    </FileRef>
 </Workspace>
