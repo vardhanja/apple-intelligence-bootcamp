@@ -40,23 +40,6 @@ class ViewModel {
     }
 }
 
-extension ViewModel {
-    func translateAllAtOnce(task: TaskItem, using session: TranslationSession) async -> TaskItem {
-        let requests: [TranslationSession.Request] = [
-            TranslationSession.Request(sourceText: task.title),
-        ]
-        
-        do {
-            let responses = try await session.translations(from: requests)
-            let translatedTask = TaskItem(id: task.id, title: task.title)
-            return translatedTask
-        } catch {
-            print("Error executing translateAllAtOnce: \(error)")
-            return task
-        }
-    }
-}
-
 // MARK: - Language availability
 
 extension ViewModel {

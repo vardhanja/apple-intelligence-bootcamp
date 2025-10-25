@@ -11,7 +11,6 @@ import Translation
 struct ContentView: View {
     @State private var showTranslation = false
     @State private var inputText: String = ""
-    @State private var translatedText: String?
     
     var body: some View {
         VStack(spacing: 20) {
