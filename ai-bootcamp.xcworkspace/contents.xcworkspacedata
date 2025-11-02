@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:04_Foundation-Model/04_Foundation-Model.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:03_Funny-Faces/03_Funny-Faces.xcodeproj">
    </FileRef>
    <FileRef
