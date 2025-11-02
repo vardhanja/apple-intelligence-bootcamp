@@ -51,7 +51,7 @@ struct MenuItem {
   @Guide(description: "The main ingredients for this dish.")
   let ingredients: [String]
 
-  @Guide(description: "A cost fot this dish in US dollars, which should be appropriate for the ingredients", )
+  @Guide(description: "A cost for this dish in US dollars, which should be appropriate for the ingredients", )
   let cost: Decimal
 }
 

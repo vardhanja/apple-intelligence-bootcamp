@@ -251,22 +251,17 @@ struct ChatView: View {
   }
 
   func summarizeChat() async {
-    // 1
-    var allText = ""
-    // 2
-    for entry in session.transcript {
-      // 3
-      switch entry {
-      case .prompt(let prompt):
-        allText += prompt.description + "\n"
-      case .response(let response):
-        allText += response.description + "\n"
-      default:
-        allText += "\n"
-      }
-    }
-    // 4
-    addMessage("Context windows exceeded. Summarizing Chat", isFromUser: false)
+      let allText = session.transcript.map {
+          switch ($0) {
+          case .prompt(let prompt):
+              prompt.description
+          case .response(let response):
+              response.description
+          default:
+              ""
+          }
+      }.joined(separator: "\n")
+      addMessage("Context windows exceeded. Summarizing Chat", isFromUser: false)
 
     let summarySession = LanguageModelSession(instructions: "Summarize all text presented to the model.")
     let summarizedText = try? await summarySession.respond(to: allText).content
