@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:05_Custom-Model-CreateML/05_Custom-Model-CreateML.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:04_Foundation-Model/04_Foundation-Model.xcodeproj">
    </FileRef>
    <FileRef
