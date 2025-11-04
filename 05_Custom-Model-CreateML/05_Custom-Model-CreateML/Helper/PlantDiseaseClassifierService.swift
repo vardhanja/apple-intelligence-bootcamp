@@ -6,7 +6,8 @@
 //
 
 
-import SwiftUI
+import UIKit
+import CoreImage
 import Vision
 import CoreML
 
@@ -30,55 +31,11 @@ class PlantDiseaseClassifierService {
         let vnModel = try VNCoreMLModel(for: mlModel)
         loadedVNModel = vnModel
         loadedCoreMLModel = mlModel
-        print("PlantDiseaseClassifier loaded with computeUnits: \(units)")
+        appLog("PlantDiseaseClassifier loaded with computeUnits: \(units)")
         break
       } catch {
         lastError = error
-        print("Failed to load PlantDiseaseClassifier with computeUnits=\(units): \(error.localizedDescription)")
-      }
-    }
-
-    // If we couldn't load via the generated model class, try to load the compiled
-    // or source .mlmodel directly from the app bundle (helps when model wasn't
-    // included in the target or wasn't compiled properly by Xcode).
-    if loadedVNModel == nil || loadedCoreMLModel == nil {
-      // List a few bundle entries for debugging
-      if let resourcePath = Bundle.main.resourcePath {
-        do {
-          let entries = try FileManager.default.contentsOfDirectory(atPath: resourcePath)
-          print("Bundle resources (first 50): \(Array(entries.prefix(50)))")
-        } catch {
-          print("Failed to list bundle resources: \(error.localizedDescription)")
-        }
-      }
-
-      // Try to load compiled model (.mlmodelc)
-      if let compiledURL = Bundle.main.url(forResource: "PlantDiseaseClassifier", withExtension: "mlmodelc") {
-        do {
-          let mlModel = try MLModel(contentsOf: compiledURL)
-          let vnModel = try VNCoreMLModel(for: mlModel)
-          loadedVNModel = loadedVNModel ?? vnModel
-          loadedCoreMLModel = loadedCoreMLModel ?? mlModel
-          print("Loaded compiled model from bundle at: \(compiledURL.path)")
-        } catch {
-          lastError = error
-          print("Failed to load compiled model at \(compiledURL.path): \(error.localizedDescription)")
-        }
-      } else if let modelURL = Bundle.main.url(forResource: "PlantDiseaseClassifier", withExtension: "mlmodel") {
-        // If only the raw .mlmodel is present, try compiling it at runtime (slow).
-        do {
-          let compiledURL = try MLModel.compileModel(at: modelURL)
-          let mlModel = try MLModel(contentsOf: compiledURL)
-          let vnModel = try VNCoreMLModel(for: mlModel)
-          loadedVNModel = loadedVNModel ?? vnModel
-          loadedCoreMLModel = loadedCoreMLModel ?? mlModel
-          print("Compiled and loaded model from source .mlmodel at: \(modelURL.path)")
-        } catch {
-          lastError = error
-          print("Failed to compile/load .mlmodel at \(modelURL.path): \(error.localizedDescription)")
-        }
-      } else {
-        print("No PlantDiseaseClassifier.mlmodel or .mlmodelc found in bundle. Ensure the model is added to the app target.")
+        appLog("Failed to load PlantDiseaseClassifier with computeUnits=\(units): \(error.localizedDescription)")
       }
     }
 
@@ -86,9 +43,8 @@ class PlantDiseaseClassifierService {
       self.model = finalVN
       self.coreMLModel = finalCore
     } else {
-      // Provide an actionable error message to make debugging easier.
       let message = "Failed to load PlantDiseaseClassifier model. Last error: \(lastError?.localizedDescription ?? "unknown")\n" +
-                    "Try cleaning the build folder, ensuring the .mlmodel is in the app target, and rebuilding in Xcode."
+                    "Try cleaning the build folder, ensuring the .mlmodel is in the app target, and rebuild."
       fatalError(message)
     }
   }
@@ -103,13 +59,13 @@ class PlantDiseaseClassifierService {
     // 3. Create a VNCoreMLRequest with the model
     let request = VNCoreMLRequest(model: model) { request, error in
       if let error = error {
-        print("Error during classification (Vision): \(error.localizedDescription)")
+        appLog("Error during classification (Vision): \(error.localizedDescription)")
 
         // If Vision fails with an inference-context error, try direct Core ML prediction.
         if error.localizedDescription.lowercased().contains("inference context") ||
            error.localizedDescription.lowercased().contains("inferencecontext") ||
            error.localizedDescription.lowercased().contains("could not create inference") {
-          print("Attempting Core ML fallback prediction (direct MLModel) since Vision failed")
+          appLog("Attempting Core ML fallback prediction (direct MLModel) since Vision failed")
           if let (label, conf) = self.coreMLPredict(from: image) {
             completion(label, conf)
             return
@@ -122,7 +78,7 @@ class PlantDiseaseClassifierService {
 
       // 4. Handle the classification results
       guard let results = request.results as? [VNClassificationObservation] else {
-        print("No results found")
+        appLog("No results found")
         completion(nil, nil)
         return
       }
@@ -130,7 +86,7 @@ class PlantDiseaseClassifierService {
       // 5. Find the top result based on confidence
       let topResult = results.max(by: { a, b in a.confidence < b.confidence })
       guard let bestResult = topResult else {
-        print("No top result found")
+        appLog("No top result found")
         completion(nil, nil)
         return
       }
@@ -150,7 +106,7 @@ class PlantDiseaseClassifierService {
       do {
         try handler.perform([request])
       } catch {
-        print("Failed to perform classification (Vision handler): \(error.localizedDescription)")
+        appLog("Failed to perform classification (Vision handler): \(error.localizedDescription)")
         // Try Core ML fallback
         if let (label, conf) = self.coreMLPredict(from: image) {
           DispatchQueue.main.async {
@@ -175,13 +131,13 @@ class PlantDiseaseClassifierService {
     UIGraphicsEndImageContext()
 
     guard let image = resizedImage, let pxBuffer = pixelBuffer(from: image, size: targetSize) else {
-      print("Failed to create pixel buffer for Core ML fallback")
+      appLog("Failed to create pixel buffer for Core ML fallback")
       return nil
     }
 
     // Determine input feature name
     guard let inputName = coreMLModel.modelDescription.inputDescriptionsByName.keys.first else {
-      print("Model has no input descriptions")
+      appLog("Model has no input descriptions")
       return nil
     }
 
@@ -228,11 +184,11 @@ class PlantDiseaseClassifierService {
         }
       }
 
-      print("Core ML prediction succeeded but no class label found")
+      appLog("Core ML prediction succeeded but no class label found")
       return nil
 
     } catch {
-      print("Core ML prediction failed: \(error.localizedDescription)")
+      appLog("Core ML prediction failed: \(error.localizedDescription)")
       return nil
     }
   }

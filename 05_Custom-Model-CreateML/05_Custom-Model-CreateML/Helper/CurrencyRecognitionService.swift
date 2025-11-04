@@ -34,11 +34,6 @@ class CurrencyRecognitionService {
       do {
         let config = MLModelConfiguration()
         config.computeUnits = cu
-        // Try generated wrapper first (if the model's Swift wrapper is named CurrencyRecognition)
-        if let wrapperType = NSClassFromString("CurrencyRecognition") as? NSObject.Type {
-          // Attempt to initialize via reflection (best-effort)
-          // Since we cannot directly call generated initializer via reflection reliably, fall back to trying the compiled model below.
-        }
 
         // Try to load model by name from bundle (compile if needed)
         if let compiledURL = Bundle.main.url(forResource: "CurrencyRecognition", withExtension: "mlmodelc") {
@@ -59,7 +54,7 @@ class CurrencyRecognitionService {
         }
       } catch {
         lastError = error
-        print("Failed loading CurrencyRecognition with computeUnits=\(cu): \(error.localizedDescription)")
+        appLog("Failed loading CurrencyRecognition with computeUnits=\(cu): \(error.localizedDescription)")
       }
     }
 
@@ -67,7 +62,7 @@ class CurrencyRecognitionService {
       self.mlModel = finalML
       self.vnModel = finalVN
       // Debug: print model description (outputs/inputs) to help verify class labels are present
-      print("[CurrencyRecognition] Loaded MLModel: \(self.mlModel.modelDescription)")
+      appLog("[CurrencyRecognition] Loaded MLModel: \(self.mlModel.modelDescription)")
     } else {
       throw CurrencyRecognitionServiceError.modelLoadFailed(lastError?.localizedDescription ?? "unknown")
     }
@@ -142,7 +137,7 @@ class CurrencyRecognitionService {
     let request = VNCoreMLRequest(model: vnModel) { [weak self] request, error in
       guard let self = self else { return }
       if let err = error {
-        print("Vision classification error: \(err.localizedDescription)")
+        appLog("Vision classification error: \(err.localizedDescription)")
         self.directPredict(pixelBuffer: pixelBuffer, topK: topK, confidenceThreshold: confidenceThreshold, completion: completion)
         return
       }
@@ -163,7 +158,7 @@ class CurrencyRecognitionService {
       self.cache.setObject(cacheArray as NSArray, forKey: key)
 
       // Debug log: show top predictions
-      print("[CurrencyRecognition] top results: \(final.map { ($0.label, $0.confidence) })")
+      appLog("[CurrencyRecognition] top results: \(final.map { ($0.label, $0.confidence) })")
 
       completion(final, nil)
     }
@@ -174,7 +169,7 @@ class CurrencyRecognitionService {
       do {
         try handler.perform([request])
       } catch {
-        print("VNImageRequestHandler perform error: \(error.localizedDescription)")
+        appLog("VNImageRequestHandler perform error: \(error.localizedDescription)")
         self.directPredict(pixelBuffer: pixelBuffer, topK: topK, confidenceThreshold: confidenceThreshold, completion: completion)
       }
     }
@@ -211,7 +206,7 @@ class CurrencyRecognitionService {
       let top = Array(averaged.prefix(topK))
       // Return averaged scores with original labels
       let final: [(label: String, confidence: Float)] = top.map { (label: $0.label, confidence: $0.confidence) }
-      print("[CurrencyRecognition][TTA] averaged results: \(final.map { ($0.label, $0.confidence) })")
+      appLog("[CurrencyRecognition][TTA] averaged results: \(final.map { ($0.label, $0.confidence) })")
       completion(final, nil)
     }
   }
