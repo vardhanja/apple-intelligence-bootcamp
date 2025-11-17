@@ -17,19 +17,31 @@ struct ClassificationResult: Hashable, Identifiable {
 }
 
 struct ContentView: View {
+  // Use a typed enum for available models (keeps UI the same but provides type-safety)
+  enum ModelType: String, CaseIterable, Identifiable {
+    case resnet50 = "resnet50"
+    case mobilenetv2 = "mobilenetv2"
+    case fastvit_t12 = "fastvit_t12"
+    case yolov8x_cls_int8 = "yolov8x-cls-int8"
+
+    var id: String { rawValue }
+
+    var display: String {
+      switch self {
+      case .resnet50: return "ResNet50"
+      case .mobilenetv2: return "MobileNetV2"
+      case .fastvit_t12: return "FastViT-T12"
+      case .yolov8x_cls_int8: return "YOLOv8x-cls-int"
+      }
+    }
+  }
+
   @State private var selectedImage: PhotosPickerItem?
   @State private var image: Image?
   @State private var cgImage: CGImage?
   @State private var classResults: [ClassificationResult] = []
-  @State private var selectedModelKey: String = "resnet50"
+  @State private var selectedModelKey: ModelType = .resnet50
   @State private var isClassifying: Bool = false
-
-  private let availableModels: [(display: String, key: String)] = [
-    ("ResNet50", "resnet50"),
-    ("MobileNetV2", "mobilenetv2"),
-    ("FastViT-T12", "fastvit_t12"),
-    ("YOLOv8x-cls-int", "yolov8x-cls-int8")
-  ]
 
   private func loadLabelsNear(_ url: URL) -> [String]? {
     let fm = FileManager.default
@@ -128,7 +140,7 @@ struct ContentView: View {
         do {
           let core = try MLModel(contentsOf: match)
           let v = try VNCoreMLModel(for: core)
-          var labels = loadLabelsNear(match)
+          let labels = loadLabelsNear(match)
           return (v, core, labels)
         } catch {
           print("Failed to load compiled model at \(match): \(error)")
@@ -266,8 +278,8 @@ struct ContentView: View {
       return
     }
 
-    guard let (vnModel, mlCoreModel, modelLabels) = loadVNModel(named: selectedModelKey) else {
-      print("Unable to load selected model: \(selectedModelKey). Make sure the model is added to the target and compiled.")
+    guard let (vnModel, mlCoreModel, modelLabels) = loadVNModel(named: selectedModelKey.rawValue) else {
+      print("Unable to load selected model: \(selectedModelKey.rawValue). Make sure the model is added to the target and compiled.")
       DispatchQueue.main.async { self.isClassifying = false }
       return
     }
@@ -280,7 +292,7 @@ struct ContentView: View {
 
     if effectiveLabels == nil {
       // helpful debug logging when labels aren't found so you can inspect the model's metadata
-      print("No class labels found for model \(selectedModelKey). Inspecting metadata keys:")
+      print("No class labels found for model \(selectedModelKey.rawValue). Inspecting metadata keys:")
       for (k, v) in mlCoreModel.modelDescription.metadata {
         print("  key=\(k.rawValue) type=\(type(of: v)) value=\(v)")
       }
@@ -288,7 +300,7 @@ struct ContentView: View {
       // Log discovered labels (count + first few) to help debugging
       let count = effectiveLabels!.count
       let sample = effectiveLabels!.prefix(5).joined(separator: ", ")
-      print("Found \(count) class labels for model \(selectedModelKey): [\(sample)\(count>5 ? ", ..." : "")]")
+      print("Found \(count) class labels for model \(selectedModelKey.rawValue): [\(sample)\(count>5 ? ", ..." : "")]")
     }
 
     let request = VNCoreMLRequest(model: vnModel) { request, error in
@@ -314,8 +326,8 @@ struct ContentView: View {
     VStack(alignment: .leading) {
       Text("Select Model:")
       Picker("Model", selection: $selectedModelKey) {
-        ForEach(availableModels, id: \.key) { entry in
-          Text(entry.display).tag(entry.key)
+        ForEach(ModelType.allCases) { model in
+          Text(model.display).tag(model)
         }
       }
       .pickerStyle(.segmented)
