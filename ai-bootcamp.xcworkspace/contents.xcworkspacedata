@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:08_Session-Tracker/08_Session-Tracker.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:07_car-help-gpt/07_car-help-gpt.xcodeproj">
    </FileRef>
    <FileRef
